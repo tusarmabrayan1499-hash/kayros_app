@@ -1,152 +1,145 @@
 import 'package:flutter/material.dart';
-import '../models/producto.dart';
-import '../models/carrito_global.dart';
-import 'carrito.dart';
 
-class Catalogo extends StatelessWidget {
+import '../models/carrito_global.dart';
+import '../models/producto.dart';
+import '../services/product_api_service.dart';
+import 'carrito.dart';
+import 'contacto_soporte.dart';
+import 'detalle_producto.dart';
+import 'seguimiento.dart';
+
+class Catalogo extends StatefulWidget {
   const Catalogo({super.key});
 
   @override
+  State<Catalogo> createState() => _CatalogoState();
+}
+
+class _CatalogoState extends State<Catalogo> {
+  final _searchCtrl = TextEditingController();
+  final _api = ProductApiService();
+
+  List<Producto> _productos = [];
+  String _categoriaSeleccionada = 'Todas';
+
+  @override
+  void initState() {
+    super.initState();
+    _cargar();
+  }
+
+  Future<void> _cargar() async {
+    final data = await _api.obtenerProductos();
+    if (!mounted) return;
+    setState(() => _productos = data);
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final productos = [
-      Producto(
-        nombre: 'AirPods',
-        precio: 299000,
-        descripcion: 'Audífonos inalámbricos con cancelación de ruido.',
-        imagen: 'assets/images/airpods.jpg',
-      ),
-      Producto(
-        nombre: 'Apple Watch',
-        precio: 499000,
-        descripcion: 'Reloj inteligente con monitoreo deportivo.',
-        imagen: 'assets/images/watch.jpg',
-      ),
-      Producto(
-        nombre: 'Power Bank',
-        precio: 129000,
-        descripcion: 'Batería portátil de alta capacidad.',
-        imagen: 'assets/images/powerbank.jpg',
-      ),
-    ];
+    final categorias = {'Todas', ..._productos.map((e) => e.categoria)}.toList();
+    final query = _searchCtrl.text.toLowerCase();
+    final visibles = _productos.where((p) {
+      final byCategory = _categoriaSeleccionada == 'Todas' || p.categoria == _categoriaSeleccionada;
+      final bySearch = p.nombre.toLowerCase().contains(query) || p.descripcion.toLowerCase().contains(query);
+      return byCategory && bySearch;
+    }).toList();
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF37474F),
-        title: const Text('CATÁLOGO'),
+        title: const Text('Catálogo'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.shopping_cart),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const Carrito())),
+          )
+        ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(12),
-        itemCount: productos.length,
-        itemBuilder: (context, index) {
-          final producto = productos[index];
-
-          return Card(
-            margin: const EdgeInsets.symmetric(vertical: 10),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+      drawer: Drawer(
+        child: ListView(
+          children: [
+            const DrawerHeader(child: Text('Kayros App')),
+            ListTile(
+              leading: const Icon(Icons.local_shipping),
+              title: const Text('Seguimiento'),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SeguimientoScreen())),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // IMAGEN
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.asset(
-                      producto.imagen,
-                      width: 100,
-                      height: 100,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-
-                  const SizedBox(width: 12),
-
-                  // INFORMACIÓN
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          producto.nombre,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-
-                        Text(
-                          '\$${producto.precio.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF00CFCB),
-                            foregroundColor: Colors.black,
-                          ),
-                          onPressed: () {
-                            CarritoGlobal.agregar(producto);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Producto agregado al carrito'),
-                              ),
-                            );
-                          },
-                          child: const Text('AÑADIR AL CARRITO'),
-                        ),
-
-                        const SizedBox(height: 6),
-
-                        ExpansionTile(
-                          tilePadding: EdgeInsets.zero,
-                          title: const Text(
-                            'ESPECIFICACIONES',
-                            style: TextStyle(fontSize: 14),
-                          ),
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Text(producto.descripcion),
-                            )
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+            ListTile(
+              leading: const Icon(Icons.support_agent),
+              title: const Text('Contacto y soporte'),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContactoSoporteScreen())),
             ),
-          );
-        },
-      ),
-
-      // BOTÓN FIJO
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(12),
-        color: const Color(0xFF263238),
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF00CFCB),
-            foregroundColor: Colors.black,
-            padding: const EdgeInsets.all(15),
-          ),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const Carrito()),
-            );
-          },
-          child: const Text('VER CARRITO'),
+          ],
         ),
       ),
+      body: _productos.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: TextField(
+                    controller: _searchCtrl,
+                    onChanged: (_) => setState(() {}),
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search),
+                      hintText: 'Buscar por nombre o palabra clave',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  height: 42,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: categorias.map((c) {
+                      final selected = c == _categoriaSeleccionada;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        child: ChoiceChip(
+                          label: Text(c),
+                          selected: selected,
+                          onSelected: (_) => setState(() => _categoriaSeleccionada = c),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: visibles.length,
+                    itemBuilder: (context, index) {
+                      final producto = visibles[index];
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        child: ListTile(
+                          leading: Image.asset(producto.imagen, width: 56, fit: BoxFit.cover),
+                          title: Text(producto.nombre),
+                          subtitle: Text('${producto.categoria} · \$${producto.precio.toStringAsFixed(0)}'),
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => DetalleProducto(producto: producto)),
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.add_shopping_cart),
+                            onPressed: () {
+                              CarritoGlobal.agregar(producto);
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Producto agregado al carrito')));
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                )
+              ],
+            ),
     );
   }
 }
-
-

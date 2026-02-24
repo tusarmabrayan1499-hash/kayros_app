@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'screens/inicio.dart';
 
 void main() {
@@ -14,8 +15,8 @@ class KayrosApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Kayros App',
       theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFF263238),
-        primaryColor: const Color(0xFF00CFCB),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF00CFCB)),
+        useMaterial3: true,
       ),
       home: const Inicio(),
     );
