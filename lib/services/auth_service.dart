@@ -1,27 +1,70 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:sqflite/sqflite.dart';
+
+import 'database_service.dart';
 
 class AuthService {
   AuthService._();
   static final AuthService instance = AuthService._();
 
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  int? _currentUserId;
+
+  int? get currentUserId => _currentUserId;
 
   Future<void> registrar(String email, String password) async {
-    await _auth.createUserWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
+    final db = await DatabaseService.instance.database;
+
+    final existing = await db.query(
+      'users',
+      where: 'email = ?',
+      whereArgs: [email],
     );
+
+    if (existing.isNotEmpty) {
+      throw Exception('email-already-in-use');
+    }
+
+    final id = await db.insert('users', {
+      'email': email,
+      'password': password,
+    });
+
+    _currentUserId = id;
   }
 
-  Future<bool> iniciarSesion(String email, String password) async {
-    await _auth.signInWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
+  Future<void> iniciarSesion(String email, String password) async {
+    final db = await DatabaseService.instance.database;
+
+    final result = await db.query(
+      'users',
+      where: 'email = ? AND password = ?',
+      whereArgs: [email, password],
     );
-    return true;
+
+    if (result.isEmpty) {
+      throw Exception('invalid-credential');
+    }
+
+    _currentUserId = result.first['id'] as int;
   }
 
   Future<void> recuperarPassword(String email) async {
-    await _auth.sendPasswordResetEmail(email: email.trim());
+    final db = await DatabaseService.instance.database;
+
+    final result = await db.query(
+      'users',
+      where: 'email = ?',
+      whereArgs: [email],
+    );
+
+    if (result.isEmpty) {
+      throw Exception('user-not-found');
+    }
+
+    // Simulación académica
+    return;
+  }
+
+  void cerrarSesion() {
+    _currentUserId = null;
   }
 }
